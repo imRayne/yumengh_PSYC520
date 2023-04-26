@@ -200,7 +200,7 @@ H_DIF_anch <- lordif(resp.data = CVI_Ach_Horg1[,1:8],
  group = as.factor(CVI_Ach_Horg1[,9]),
  model = "GRM",
  anchor = c(3))
-H_DIF_anch # Items flagged: 1, 2, 5, 6, 7, 8 
+H_DIF_anch # Items flagged: all items
 ```
 
 #### Money
