@@ -115,9 +115,7 @@ plot(m_grm_H)
 plot(m_grm_H, type = "info")
 plot(m_grm_H, type = "infotrace")
 plot(m_grm_H, type = "trace")
-Theta <- matrix(seq(-6,6,length.out = 200))
-# expected.H <- expected.item(extract.item(m_grm_H,item = 1),Theta,min(CVI_Ach_H[,1]))
-plot(data.frame(expected.H,Theta= Theta))
+
 coef(m_grm_H)
 # Compare constrained and non-contrained model
 anova(mirt(CVI_Ach_R, 1, itemtype = "graded",constrained = TRUE),mirt(CVI_Ach_R, 1, itemtype = "graded",constrained = FALSE)) #No significant difference
