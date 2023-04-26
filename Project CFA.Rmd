@@ -1,0 +1,250 @@
+---
+title: "HW 6"
+output: html_document
+date: "2023-04-21"
+---
+
+# Data and Package Preparation
+
+```{r}
+library(tidyverse)
+library(lavaan)
+library(semPlot, include.only = "semPaths")  # for plotting
+library(modelsummary, include.only = "msummary")
+library(semTools, include.only = "compRelSEM")  # for composite reliability
+library(semptools)  # for adjusting plots
+library(flextable)  # for tables
+library(psych)
+```
+
+```{r}
+# Data Import
+CVI_Ach <- readxl::read_xlsx("~/Rayne/Exchange/PSYC 520/Data_CVI.xlsx")
+CVI_Ach <- CVI_Ach[,4:23]
+head(CVI_Ach)
+CVI_Ach$`CVI12.591_M` <- 5-CVI_Ach$`CVI12.591_M`
+
+
+# Dataset of Honor Facet
+CVI_Ach_H <- CVI_Ach[,c("CVI12.3_H","CVI12.35_H","CVI12.50_H","CVI12.213_H","CVI12.517_H","CVI12.651_H","CVI12.659_H","CVI12.664_H")]
+
+# Dataset of Money Facet
+CVI_Ach_M <- CVI_Ach[,c("CVI12.55_M",	"CVI12.57_M",	"CVI12.62_M","CVI12.86_M",	"CVI12.89_M",	"CVI12.591_M")]
+
+# Dataset of Result Facet
+CVI_Ach_R <- CVI_Ach[,c("CVI12.78_R",	"CVI12.79_R",	"CVI12.80_R",	"CVI12.85_R",	"CVI12.102_R",	"CVI12.103_R")]
+
+# Polychoric Correlation Matrix
+pcorr_ach <- lavaan::lavCor(data.frame(CVI_Ach_H,CVI_Ach_M,CVI_Ach_R), ordered = TRUE)
+pcorr_ach
+```
+
+# First Model
+
+## Model Specification
+
+```{r}
+# Factor Model
+cfa_mod_ml <-"
+    Honor =~ CVI12.3_H+CVI12.35_H+CVI12.50_H+CVI12.213_H+CVI12.517_H+CVI12.651_H+CVI12.659_H+CVI12.664_H  
+    Money =~ CVI12.55_M+CVI12.57_M+CVI12.62_M +CVI12.86_M +CVI12.89_M+CVI12.591_M
+    Result =~ CVI12.78_R + CVI12.79_R + CVI12.80_R + CVI12.85_R +  CVI12.102_R +  CVI12.103_R    
+
+"
+
+cfa_dag_ml <- dagitty::lavaanToGraph(cfa_mod_ml)
+semPlot::semPaths(lavaanify(cfa_mod_ml))
+```
+
+## Model Estimation
+
+```{r}
+# ML
+cfa_achi_ml <- cfa(
+    cfa_mod_ml,
+    data = CVI_Ach,
+    missing = "fiml",
+    estimator = "MLR",
+    std.lv = TRUE
+)
+# WLSMV (missing data with listwise)
+cfa_achi_wls <- cfa(
+    cfa_mod_ml,
+    data = CVI_Ach,
+    ordered = TRUE,
+    estimator = "WLSMV",  # default when `ordered = TRUE`
+    std.lv = TRUE
+)
+# Compare
+msummary(
+    list(MLR = cfa_achi_ml, WLSMV = cfa_achi_wls),
+    shape = term ~ model + statistic
+)
+
+```
+
+## Model Fit
+
+```{r}
+summary(
+    semTools::compareFit(cfa_achi_ml, cfa_achi_wls, nested = FALSE)
+)
+summary(cfa_achi_ml, fit.measures = TRUE)
+```
+
+Maximum likelihood model has lower chi-square, rmsea, and srmr, and higher cfi, thus ml model is preferred.
+
+## Residual Matrix
+
+```{r}
+# Residual
+resid(cfa_achi_ml, type = "cor")
+```
+
+## Modification Indices
+
+```{r}
+modindices(cfa_achi_ml, sort = TRUE, minimum = 10)
+```
+
+CVI12.102_R and CVI12.103_R, as well as CVI12.62_M and CVI12.591_M showed high modification indices. Therefore,a revised model adding the relationship between the two pairs is considered.
+
+# Revised Model
+
+```{r}
+cfa_mod_mlr <-"
+    Honor =~ CVI12.3_H+CVI12.35_H+CVI12.50_H+CVI12.213_H+CVI12.517_H+CVI12.651_H+CVI12.659_H+CVI12.664_H  
+    Money =~ CVI12.55_M+CVI12.57_M+CVI12.62_M +CVI12.86_M +CVI12.89_M+CVI12.591_M
+    Result =~ CVI12.78_R + CVI12.80_R + CVI12.85_R +CVI12.79_R +CVI12.102_R+CVI12.103_R    
+    CVI12.102_R	~~	CVI12.103_R
+    CVI12.62_M	~~	CVI12.591_M
+"
+
+cfa_dag_mlr <- dagitty::lavaanToGraph(cfa_mod_mlr)
+semPlot::semPaths(lavaanify(cfa_mod_mlr))
+```
+
+```{r}
+# MLR - Revised
+cfa_achi_mlr <- cfa(
+    cfa_mod_mlr,
+    data = CVI_Ach,
+    missing = "fiml",
+    estimator = "MLR",
+    std.lv = TRUE
+)
+summary(cfa_achi_mlr, fit.measures = TRUE)
+summary(
+    semTools::compareFit(cfa_achi_ml, cfa_achi_mlr, nested = FALSE)
+)
+resid(cfa_achi_mlr, type = "cor")
+modindices(cfa_achi_mlr, sort = TRUE, minimum = 15)
+```
+
+The revised model shows greater fit. \## Path Diagram
+
+```{r}
+# Path Diagram
+p <- semPaths(
+    cfa_achi_mlr,
+    whatLabels = "est",
+    nCharNodes = 0,
+    sizeMan = 4,
+    node.width = 1,
+    edge.label.cex = .65,
+    # Larger margin
+    mar = c(8, 5, 12, 5),
+    DoNotPlot = TRUE,
+    intercepts = FALSE
+)
+
+# Create a vector of column names
+col_names <- paste0(gsub("\"", "", colnames(CVI_Ach)), collapse = ", ")
+indicator_order = c("CVI12.3_H", "CVI12.35_H", "CVI12.50_H", "CVI12.213_H", "CVI12.517_H", "CVI12.651_H", "CVI12.659_H", "CVI12.664_H","CVI12.55_M", "CVI12.57_M", "CVI12.62_M", "CVI12.86_M", "CVI12.89_M", "CVI12.591_M", "CVI12.102_R", "CVI12.103_R","CVI12.78_R","CVI12.79_R", "CVI12.80_R", "CVI12.85_R")
+p2 <- set_cfa_layout(
+    p,
+    indicator_order,
+    indicator_factor = c(rep("Honor", 8), rep("Money", 6), rep("Result", 6)),
+    # Make covariances more curved
+    fcov_curve = 1.75,
+    # Move loadings down
+    loading_position = .8) |>
+    mark_se(object = cfa_achi_mlr, sep = "\n")
+plot(p2)
+```
+
+## Omega Coefficient
+
+```{r}
+(omegas <- compRelSEM(cfa_achi_mlr))
+```
+
+## Table
+
+Table 1: Factor loadings and uniqueness from the 4-factor CFA
+![](images/%E6%88%AA%E5%B1%8F2023-04-24%20%E4%B8%8A%E5%8D%8810.15.51.png)
+
+```{r}
+# Table 1
+# Extract estimates
+# parameterEstimates(cfa_achi_mlr) |>
+#     # filter only loadings and variances
+#     dplyr::filter(grepl("^I.*", rhs)) |>
+#     # Remove unique covariance
+#     dplyr::filter(op == "=~" | lhs == rhs) |>
+#     # select columns
+#     dplyr::select(op, rhs, est, ci.lower, ci.upper) |>
+#     # make loadings and variances in different columns
+#     tidyr::pivot_wider(names_from = op,
+#                        values_from = 3:5) 
+
+    # # add rows
+    # tibble::add_row(rhs = "Result", .before = 15) |>
+    # tibble::add_row(rhs = "Money", .before = 9) |>
+    # tibble::add_row(rhs = "Honor", .before = 1) |>
+    # flextable::flextable() |>
+    # # Two digits
+    # colformat_double(digits = 2) |>
+    # # Set heading
+    # set_header_labels(
+    #     values = c("item", "Est", "LL", "UL", "Est", "LL", "UL")
+    # ) |>
+    # add_header_row(
+    #     values = c("", "Loading", "Uniqueness"),
+    #     colwidths = c(1, 3, 3)
+    # ) |>
+    # # merge columns
+    # 
+    # merge_h_range(i = c(1, 5, 9, 13), j1 = 1, j2 = 7) |>
+    # # alignment
+    # align(i = 1, align = "center", part = "header") |>
+    # align(i = c(1, 5, 9, 13), align = "center", part = "body")
+```
+
+```{r}
+# Table 2: Factor correlations of the latent variables
+# Latent correlations
+cor_lv <- lavInspect(cfa_achi_mlr, what = "cor.lv")
+# Remove upper part
+cor_lv[upper.tri(cor_lv, diag = TRUE)] <- NA
+cor_lv |>
+    as.data.frame() |>
+    rownames_to_column("var") |>
+    # Number first column
+    mutate(var = paste0(1:3, ".", var)) |>
+    flextable::flextable() |>
+    colformat_double(digits = 2) |>
+    set_header_labels(
+        values = c("", "1", "2", "3")
+    )
+```
+
+# Report
+
+A 3-factor model was fitted to the data, with each item loading on one of the three factors: Honor (Items 1 to 8), Money (Items 9 to 14), and Result (Items 15 to 20). The lavaan package (v0.6.15; Rosseel, 2012) was used, employing maximum likelihood estimation with robust standard errors. There were no missing data, as all participants responded to all items. The model was evaluated using the global 𝜒2 test and goodness-of-fit indices, including robust RMSEA (≤ .05 indicating good fit; Browne & Cudeck, 1993), robust CFI (≥ .95 indicating good fit; Hu & Bentler, 1999), and SRMR (≤ .08 indicating acceptable fit; Hu & Bentler, 1999). The correlation residuals and modification indices were also considered.
+
+The results indicated that the hypothesized 3-factor model did not fit the data perfectly, as indicated by the 𝜒2 test and CFI (= .883), with scaled $\chi^2$ (N = 1568, *df* = 167) = 1064.342, *p* \< .001. However, the fit was reasonable, with RMSEA = .064, 90% CI [.055, .062], and SRMR = .069. The inspection of the correlation residuals revealed relatively large unmodelled correlations between CVI12.591_M and CVI12.62_M (0.138), as well as CVI12.102_R and CVI12.103_R (0.173), and the modification indices suggested adding unique covariance between those two pairs of items ($MI_1$ = 92.922, $MI_2$= 112.024).
+
+As two pairs of items had similar wordings, the model was refitted with unique covariance between them, resulting in an improved fit, $\chi^2$(N = 1568, *df* = 165) = 644, *p* \< .001, RMSEA = .058, 90% CI [.050, .056], CFI = .906, and SRMR = .069. No further modifications to the model that were theoretically justified were suggested by further inspection of correlation residuals and modification indices.
+
+Parameter estimates for the loadings and uniqueness based on the final model are presented in Figure 1, Table 1, and Table 2. The omega coefficient for the composite reliability was .856 for Honor (Items 1 to 8), .785 for Money (Items 9 to 14), and .696 for Result (Items 15 to 20) when forming composites for the three latent factors.
