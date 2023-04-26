@@ -1,5 +1,5 @@
 ---
-title: "HW 6"
+title: ""
 output: html_document
 date: "2023-04-21"
 ---
@@ -239,12 +239,3 @@ cor_lv |>
     )
 ```
 
-# Report
-
-A 3-factor model was fitted to the data, with each item loading on one of the three factors: Honor (Items 1 to 8), Money (Items 9 to 14), and Result (Items 15 to 20). The lavaan package (v0.6.15; Rosseel, 2012) was used, employing maximum likelihood estimation with robust standard errors. There were no missing data, as all participants responded to all items. The model was evaluated using the global 𝜒2 test and goodness-of-fit indices, including robust RMSEA (≤ .05 indicating good fit; Browne & Cudeck, 1993), robust CFI (≥ .95 indicating good fit; Hu & Bentler, 1999), and SRMR (≤ .08 indicating acceptable fit; Hu & Bentler, 1999). The correlation residuals and modification indices were also considered.
-
-The results indicated that the hypothesized 3-factor model did not fit the data perfectly, as indicated by the 𝜒2 test and CFI (= .883), with scaled $\chi^2$ (N = 1568, *df* = 167) = 1064.342, *p* \< .001. However, the fit was reasonable, with RMSEA = .064, 90% CI [.055, .062], and SRMR = .069. The inspection of the correlation residuals revealed relatively large unmodelled correlations between CVI12.591_M and CVI12.62_M (0.138), as well as CVI12.102_R and CVI12.103_R (0.173), and the modification indices suggested adding unique covariance between those two pairs of items ($MI_1$ = 92.922, $MI_2$= 112.024).
-
-As two pairs of items had similar wordings, the model was refitted with unique covariance between them, resulting in an improved fit, $\chi^2$(N = 1568, *df* = 165) = 644, *p* \< .001, RMSEA = .058, 90% CI [.050, .056], CFI = .906, and SRMR = .069. No further modifications to the model that were theoretically justified were suggested by further inspection of correlation residuals and modification indices.
-
-Parameter estimates for the loadings and uniqueness based on the final model are presented in Figure 1, Table 1, and Table 2. The omega coefficient for the composite reliability was .856 for Honor (Items 1 to 8), .785 for Money (Items 9 to 14), and .696 for Result (Items 15 to 20) when forming composites for the three latent factors.
