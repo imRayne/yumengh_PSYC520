@@ -1,0 +1,271 @@
+---
+title: "Project"
+output: html_document
+date: "2023-04-22"
+---
+
+# Package and Data loading
+
+```{r}
+library(mirt)
+Data_CVI <- readxl::read_xlsx("~/Rayne/Exchange/PSYC 520/Data_CVI.xlsx")
+Data_CVI$`CVI12.591_M` <- 5-Data_CVI$`CVI12.591_M`
+
+# Dataset of Honor Facet
+CVI_Ach_H <- Data_CVI[,c("CVI12.3_H","CVI12.35_H","CVI12.50_H","CVI12.213_H","CVI12.517_H","CVI12.651_H","CVI12.659_H","CVI12.664_H")]
+
+# Dataset of Money Facet
+CVI_Ach_M <- Data_CVI[,c("CVI12.55_M",	"CVI12.57_M",	"CVI12.62_M","CVI12.86_M",	"CVI12.89_M",	"CVI12.591_M")]
+
+# Dataset of Result Facet
+CVI_Ach_R <- Data_CVI[,c("CVI12.78_R",	"CVI12.79_R",	"CVI12.80_R",	"CVI12.85_R",	"CVI12.102_R",	"CVI12.103_R")]
+
+CVI_Ach <- data.frame(c(CVI_Ach_H,CVI_Ach_M,CVI_Ach_R))
+CVI_Ach_O <- data.frame(c(CVI_Ach_H,CVI_Ach_M,CVI_Ach_R,Data_CVI$"Origin"))
+```
+
+```{r}
+# Dataset of Honor Facet
+CVI_Ach_Horg <- Data_CVI[,c("CVI12.3_H","CVI12.35_H","CVI12.50_H","CVI12.213_H","CVI12.517_H","CVI12.651_H","CVI12.659_H","CVI12.664_H","Origin")]
+CVI_Ach_Horg1 <- as.data.frame(subset(CVI_Ach_Horg,(Origin =="Mainland China" | Origin =="Hong Kong"), select = c(1:8,Origin)))
+# Dataset of Money Facet
+CVI_Ach_Morg <- Data_CVI[,c("CVI12.55_M",	"CVI12.57_M",	"CVI12.62_M","CVI12.86_M",	"CVI12.89_M",	"CVI12.591_M","Origin")]
+CVI_Ach_Morg1 <- as.data.frame(subset(CVI_Ach_Morg,(Origin =="Mainland China" | Origin =="Hong Kong"), select = c(1:6,Origin)))
+# Dataset of Result Facet
+CVI_Ach_Rorg <- Data_CVI[,c("CVI12.78_R",	"CVI12.79_R",	"CVI12.80_R",	"CVI12.85_R",	"CVI12.102_R",	"CVI12.103_R","Origin")]
+CVI_Ach_Rorg1 <- as.data.frame(subset(CVI_Ach_Rorg,(Origin =="Mainland China" | Origin =="Hong Kong"), select = c(1:6,Origin)))
+#CVI_Ach_O<-as.data.frame(subset(Data_CVI,(Origin =="Mainland China" | Origin =="Hong Kong"), select = c(4:23,Origin)))
+
+```
+
+```{r}
+# Produce descriptive/distribution of the items
+tha_data_inuse <- Data_CVI %>% mutate(across(.cols = c("CVI12.3_H","CVI12.35_H","CVI12.50_H","CVI12.213_H","CVI12.517_H","CVI12.651_H","CVI12.659_H","CVI12.664_H","CVI12.55_M",	"CVI12.57_M",	"CVI12.62_M","CVI12.86_M",	"CVI12.89_M",	"CVI12.591_M","CVI12.78_R",	"CVI12.79_R",	"CVI12.80_R",	"CVI12.85_R",	"CVI12.102_R",	"CVI12.103_R","Origin"),factor))
+tabFirst <- CreateTableOne(vars = c("CVI12.3_H","CVI12.35_H","CVI12.50_H","CVI12.213_H","CVI12.517_H","CVI12.651_H","CVI12.659_H","CVI12.664_H","CVI12.55_M",	"CVI12.57_M",	"CVI12.62_M","CVI12.86_M",	"CVI12.89_M",	"CVI12.591_M","CVI12.78_R",	"CVI12.79_R",	"CVI12.80_R",	"CVI12.85_R",	"CVI12.102_R",	"CVI12.103_R","Origin"), data = tha_data_inuse,
+includeNA = T,test = F)
+tabFirst
+```
+
+```{r}
+# Exploratory
+CVI_Ach <- data.frame(CVI_Ach_H,CVI_Ach_M,CVI_Ach_R)
+m_grm_1 <- mirt(CVI_Ach, 1, itemtype = "graded")
+
+## 2-Factor Model
+m_grm_2 <- mirt(CVI_Ach, 2, itemtype = "graded")
+anova(m_grm_1,m_grm_2) # Compare model fit between 1-factor and 2-factor model
+
+## 3-Factor Model
+m_grm_3 <- mirt(CVI_Ach, 3, itemtype = "graded")
+anova(m_grm_2,m_grm_3)
+
+```
+
+# Assumption Testing
+
+## Unidimensionality
+Scree plot of eigenvalue
+```{r}
+polycorr_H <- polychoric(CVI_Ach_H,global=FALSE)$rho
+poly_eigen_H <- eigen(polycorr_H)$values
+round(poly_eigen_H,3)
+plot(1:length(poly_eigen_H),poly_eigen_H, type="b", pch=20, xlab="",ylab="Eigenvalues")
+
+polycorr_M <- polychoric(CVI_Ach_M,global=FALSE)$rho
+poly_eigen_M <- eigen(polycorr_M)$values
+round(poly_eigen_M,3)
+plot(1:length(poly_eigen_M),poly_eigen_M, type="b", pch=20, xlab="",ylab="Eigenvalues")
+
+polycorr_R <- polychoric(CVI_Ach_R,global=FALSE)$rho
+poly_eigen_R <- eigen(polycorr_R)$values
+round(poly_eigen_R,3)
+plot(1:length(poly_eigen_R),poly_eigen_R, type="b", pch=20, xlab="",ylab="Eigenvalues")
+```
+
+
+## Local dependence - Residual correlations
+```{r}
+m_grm_H <- mirt(CVI_Ach_H, 1, itemtype = "graded")
+round(M2(m_grm_H, residmat = TRUE),3)
+m_grm_M <- mirt(CVI_Ach_M, 1, itemtype = "graded")
+round(M2(m_grm_M, residmat = TRUE),3)
+m_grm_R <- mirt(CVI_Ach_R, 1, itemtype = "graded")
+round(M2(m_grm_R, residmat = TRUE),3)
+```
+
+## Monotonicity
+
+```{r}
+library(mokken)
+H.monot<-summary(check.monotonicity(CVI_Ach_H, minvi = 0.03) )
+H.monot
+M.monot<-summary(check.monotonicity(CVI_Ach_M, minvi = 0.03) )
+M.monot
+R.monot<-summary(check.monotonicity(CVI_Ach_R, minvi = 0.03) )
+R.monot
+```
+
+# Separate Model
+## Honor Model
+
+```{r}
+m_grm_H <- mirt(CVI_Ach_H, 1, itemtype = "graded")
+summary(m_grm_H)
+plot(m_grm_H)
+plot(m_grm_H, type = "info")
+plot(m_grm_H, type = "infotrace")
+plot(m_grm_H, type = "trace")
+Theta <- matrix(seq(-6,6,length.out = 200))
+# expected.H <- expected.item(extract.item(m_grm_H,item = 1),Theta,min(CVI_Ach_H[,1]))
+plot(data.frame(expected.H,Theta= Theta))
+coef(m_grm_H)
+# Compare constrained and non-contrained model
+anova(mirt(CVI_Ach_R, 1, itemtype = "graded",constrained = TRUE),mirt(CVI_Ach_R, 1, itemtype = "graded",constrained = FALSE)) #No significant difference
+M2(m_grm_H)
+```
+
+
+## Money Model
+
+```{r}
+m_grm_M <- mirt(CVI_Ach_M, 1, itemtype = "graded")
+summary(m_grm_M)
+plot(m_grm_M)
+plot(m_grm_M, type = "info")
+plot(m_grm_H, type = "infotrace")
+plot(m_grm_M, type = "trace")
+coef(m_grm_M)
+anova(mirt(CVI_Ach_M, 1, itemtype = "graded",constrained = TRUE),mirt(CVI_Ach_M, 1, itemtype = "graded",constrained = FALSE)) #No significant difference
+
+```
+
+## Result Model
+
+```{r}
+m_grm_R <- mirt(CVI_Ach_R, 1, itemtype = "graded")
+summary(m_grm_R)
+plot(m_grm_R)
+plot(m_grm_R, type = "info")
+plot(m_grm_R, type = "infotrace")
+plot(m_grm_R, type = "trace")
+coef(m_grm_R)
+anova(mirt(CVI_Ach_R, 1, itemtype = "graded",constrained = TRUE),mirt(CVI_Ach_R, 1, itemtype = "graded",constrained = FALSE))#No significant difference
+
+```
+
+# Differential Item Fucntioning
+
+Load the Libraries
+
+```{r}
+library(tidyverse) 
+library(tableone) 
+library(lordif) # For DIF test 
+library(psych)
+```
+
+
+## Separate Models
+
+### lordif()
+#### Honor
+Allowing the R functions to specify the anchor items. $\chi^2$ as detection criterion, and $R^2$ as the magnitude measure chisq1,2 -- uniform DIF chisq1,3 -- nonuniform DIF chisq2,3 -- total DIF \#### Honor
+
+```{r}
+originDIF_H_Chi <- lordif(as.data.frame(CVI_Ach_Horg1[,1:8]), 
+                   group = CVI_Ach_Horg1[,9],
+                   alpha = 0.01,
+                   model="GRM" )
+originDIF_H_Chi #All items got flagged
+
+originDIF_H_R2 <- lordif(as.data.frame(CVI_Ach_Horg1[,1:8]), 
+                    group = CVI_Ach_Horg1[,9],
+                    criterion=c("R2"),
+                    pseudo.R2=c("McFadden"),#"Nagelkerke","CoxSnell"),
+                    R2.change=0.02, 
+                    model="GRM" )
+originDIF_H_R2 # No item got flagged
+
+originDIF_H_Beta <- lordif(as.data.frame(CVI_Ach_Horg1[,1:8]), 
+                    group = CVI_Ach_Horg1[,9],
+                    criterion="Beta",
+                    beta.change = 0.1, 
+                    model="GRM" )
+originDIF_H_Beta # No item got flagged
+
+```
+
+Set I3 is selected as the anchor item, since it is the closest to the selection criteria of alpha = 0.01 when using chisq as the selection rule.
+
+```{r}
+H_DIF_anch <- lordif(resp.data = CVI_Ach_Horg1[,1:8],
+ group = as.factor(CVI_Ach_Horg1[,9]),
+ model = "GRM",
+ anchor = c(3))
+H_DIF_anch # Items flagged: 1, 2, 5, 6, 7, 8 
+```
+
+#### Money
+
+```{r}
+originDIF_M_Chi <- lordif(as.data.frame(CVI_Ach_Morg1[,1:6]), 
+                    group = CVI_Ach_Morg1[,7], 
+                    model="GRM" )
+originDIF_M_Chi #Items flagged: 3, 4, 6 
+plot(originDIF_M_Chi, labels = c('Mainland', 'Hong Kong')) 
+
+originDIF_M_R2 <- lordif(as.data.frame(CVI_Ach_Morg1[,1:6]), 
+                    group = CVI_Ach_Morg1[,7], 
+                    criterion=c("R2"),
+                    pseudo.R2=c("McFadden","Nagelkerke","CoxSnell"),
+                    R2.change=0.02, 
+                    model="GRM" )
+originDIF_M_R2 #Items flagged: 4 
+plot(originDIF_M_R2, labels = c('Mainland', 'Hong Kong')) 
+
+originDIF_M_Beta <- lordif(as.data.frame(CVI_Ach_Morg1[,1:6]), 
+                    group = CVI_Ach_Morg1[,7], 
+                    criterion="Beta",
+                    beta.change = 0.1, 
+                    model="GRM" )
+originDIF_M_Beta #None is flagged
+```
+
+I1, I2, I5 is selected as the anchor item, since it is nonsignificant to the selection criteria of alpha = 0.01 when using chisq as the selection rule, and has the largest slope.
+
+Anchor item: I1, I2, I5
+
+```{r}
+M_DIF_anch <- lordif(resp.data = CVI_Ach_Morg1[,1:6],
+ group = as.factor(CVI_Ach_Morg1[,7]),
+ model = "GRM",
+ anchor = c(1,2,5))
+M_DIF_anch # Items flagged: 3, 4, 6 
+```
+
+#### Result
+
+```{r}
+originDIF_R_Chi <- lordif(as.data.frame(CVI_Ach_Rorg1[,1:6]), 
+                    group = CVI_Ach_Rorg1[,7], 
+                    model="GRM" )
+originDIF_R_Chi #All are flagged
+
+originDIF_R_R2 <- lordif(as.data.frame(CVI_Ach_Rorg1[,1:6]), 
+                    group = CVI_Ach_Rorg1[,7],
+                    criterion=c("R2"),
+                    pseudo.R2=c("McFadden","Nagelkerke","CoxSnell"),
+                    #alpha =0.01,
+                    R2.change=0.02, 
+                    model="GRM" )
+originDIF_R_R2 #None is flagged
+
+originDIF_R_Beta <- lordif(as.data.frame(CVI_Ach_Rorg1[,1:6]), 
+                    group = CVI_Ach_Rorg1[,7],
+                    criterion="Beta",
+                    beta.change = 0.1, 
+                    model="GRM" )
+originDIF_R_Beta #None is flagged
+
+```
+
